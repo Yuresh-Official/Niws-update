@@ -1,25 +1,27 @@
 const apiKey = "hiru_58d3adee3c4f2f452d175f42e18b30f7";
 const baseUrl = "https://hiru-api-news.vercel.app/api/news/";
-// CORS ප්‍රශ්නය විසඳන්න proxy එකක් එකතු කළා
-const proxyUrl = "https://corsproxy.io/?"; 
 
 async function fetchNews(type) {
     const container = document.getElementById('news-container');
     const ticker = document.getElementById('breaking-news');
     container.innerHTML = '<div class="loader">පුවත් ලැබෙමින් පවතී...</div>';
 
-    // සම්පූර්ණ URL එක හදනවා
-    const finalUrl = `${proxyUrl}${encodeURIComponent(baseUrl + type + '?apikey=' + apiKey)}`;
-
     try {
-        const response = await fetch(finalUrl);
+        const response = await fetch(`${baseUrl}${type}?apikey=${apiKey}`);
         const data = await response.json();
         
-        // API response එක අනුව දත්ත ලබා ගැනීම
-        const articles = data.result || data; 
+        // API එකෙන් දත්ත ලැබෙන විවිධ ආකාර චෙක් කිරීම
+        let articles = [];
+        if (Array.isArray(data)) {
+            articles = data;
+        } else if (data.result && Array.isArray(data.result)) {
+            articles = data.result;
+        } else if (data.news && Array.isArray(data.news)) {
+            articles = data.news;
+        }
 
-        if (!Array.isArray(articles)) {
-            container.innerHTML = '<p>දත්ත ලැබීමේ දෝෂයක්! කරුණාකර පසුව උත්සාහ කරන්න.</p>';
+        if (articles.length === 0) {
+            container.innerHTML = '<p>දැනට පුවත් කිසිවක් නොමැත.</p>';
             return;
         }
 
@@ -27,14 +29,18 @@ async function fetchNews(type) {
         let tickerText = "";
 
         articles.forEach(article => {
-            tickerText += ` • ${article.title} `;
+            // නිව්ස් ටිකර් එක සඳහා
+            tickerText += ` • ${article.title || 'Breaking News'} `;
             
+            // නිව්ස් පින්තූරය
+            const newsImg = article.image || article.img || article.thumb || 'https://via.placeholder.com/400x250?text=No+Image';
+
             const card = `
                 <div class="news-card">
-                    <img src="${article.image || 'https://via.placeholder.com/400x250?text=News+Image'}" alt="news">
+                    <img src="${newsImg}" alt="news">
                     <div class="news-content">
-                        <h3>${article.title}</h3>
-                        <p>${article.desc || article.description || ''}</p>
+                        <h3>${article.title || 'No Title'}</h3>
+                        <p>${article.description || article.desc || ''}</p>
                         <a href="${article.url}" target="_blank" class="read-more">වැඩිදුර කියවන්න</a>
                     </div>
                 </div>
@@ -45,8 +51,8 @@ async function fetchNews(type) {
         ticker.innerText = tickerText;
 
     } catch (error) {
-        container.innerHTML = '<p>දත්ත ලබා ගැනීමට නොහැකි විය. කරුණාකර නැවත උත්සාහ කරන්න.</p>';
-        console.error("Fetch error:", error);
+        container.innerHTML = '<p>දත්ත ලැබීමේ දෝෂයක්. කරුණාකර API එක පරීක්ෂා කරන්න.</p>';
+        console.error("Fetch Error:", error);
     }
 }
 
