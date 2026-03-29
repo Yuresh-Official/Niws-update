@@ -1,62 +1,54 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+// Firebase Configuration
+// ඔයාගේ අලුත් Firebase Project එකේ URL එක මෙතන තියෙනවා
+const databaseURL = "https://news-9eb3f-default-rtdb.firebaseio.com/";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyDsJ3-0AXE5e2XYSFbYnXz9KnlY1AvOv7g",
-  authDomain: "smart-notes-sl.firebaseapp.com",
-  databaseURL: "https://smart-notes-sl-default-rtdb.firebaseio.com",
-  projectId: "smart-notes-sl",
-  storageBucket: "smart-notes-sl.firebasestorage.app",
-  messagingSenderId: "887470710465",
-  appId: "1:887470710465:web:dced581802fce10ef93e40",
-  measurementId: "G-YFSVQYCYW0"
-};
+// පුවත් දත්ත ලබා ගැනීමේ Function එක
+async function fetchNews() {
+    const newsContainer = document.getElementById('news-container');
+    
+    try {
+        // Firebase එකෙන් news ලබා ගැනීම
+        const response = await fetch(`${databaseURL}news.json`);
+        const data = await response.json();
 
-const app = initializeApp(firebaseConfig);
-const db = getDatabase(app);
-
-function loadNews() {
-    const container = document.getElementById('news-container');
-    const ticker = document.getElementById('breaking-news');
-    const newsRef = ref(db, 'news');
-
-    onValue(newsRef, (snapshot) => {
-        const data = snapshot.val();
-        
+        // පද්ධතියේ පුවත් නොමැති නම් හෝ දත්ත නැතිනම්
         if (!data) {
-            container.innerHTML = `
-                <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
+            newsContainer.innerHTML = `
+                <div class="no-news">
                     <h3>පද්ධතියේ පුවත් කිසිවක් නොමැත.</h3>
                     <p>කරුණාකර Firebase Realtime Database එකට පුවත් ඇතුළත් කරන්න.</p>
                 </div>`;
-            ticker.innerText = "පුවත් කිසිවක් වාර්තා වී නොමැත.";
             return;
         }
 
-        container.innerHTML = '';
-        let tickerText = "";
-        
-        // Data Objects Array එකක් බවට හරවා අලුත්ම ඒවා උඩට ගැනීම
-        const newsList = Object.values(data).reverse();
+        // පවතින පුවත් මකා අලුත් ඒවා පෙන්වීම
+        newsContainer.innerHTML = '';
 
-        newsList.forEach(item => {
-            tickerText += ` • ${item.title} `;
-            
-            const card = `
+        // දත්ත Object එකක් නිසා එය Array එකකට හරවා පෙන්වීම
+        Object.keys(data).reverse().forEach(key => {
+            const news = data[key];
+            const newsHtml = `
                 <div class="news-card">
-                    <img src="${item.image || 'https://via.placeholder.com/400x250?text=News'}" alt="news">
+                    <img src="${news.image}" alt="${news.title}" onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
                     <div class="news-content">
-                        <h3>${item.title}</h3>
-                        <p>${item.desc || item.description || ''}</p>
-                        <a href="${item.url || '#'}" target="_blank" class="read-more">වැඩිදුර කියවන්න →</a>
+                        <h2>${news.title}</h2>
+                        <p>${news.desc}</p>
+                        <a href="${news.url}" target="_blank" class="read-more">වැඩිදුර කියවන්න</a>
                     </div>
                 </div>
             `;
-            container.innerHTML += card;
+            newsContainer.innerHTML += newsHtml;
         });
 
-        ticker.innerText = tickerText;
-    });
+    } catch (error) {
+        console.error("Error fetching news:", error);
+        newsContainer.innerHTML = `
+            <div class="error-msg">
+                <h3>පුවත් පූරණය කිරීමේ දෝෂයකි!</h3>
+                <p>ඔබේ අන්තර්ජාල සබඳතාවය පරීක්ෂා කර නැවත උත්සාහ කරන්න.</p>
+            </div>`;
+    }
 }
 
-window.onload = loadNews;
+// පිටුව Load වන විට පුවත් ලබා ගැනීම ආරම්භ කරන්න
+window.onload = fetchNews;
