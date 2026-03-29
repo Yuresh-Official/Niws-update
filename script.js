@@ -1,24 +1,28 @@
 const apiKey = "hiru_58d3adee3c4f2f452d175f42e18b30f7";
 const baseUrl = "https://hiru-api-news.vercel.app/api/news/";
-const proxy = "https://corsproxy.io/?"; // CORS ප්‍රශ්නය විසඳන්න මේක අනිවාර්යයි
+// CORS Error එක විසඳීමට මෙම Proxy එක අනිවාර්යයි
+const proxyUrl = "https://corsproxy.io/?"; 
 
 async function fetchNews(type) {
     const container = document.getElementById('news-container');
     const ticker = document.getElementById('breaking-news');
-    container.innerHTML = '<div class="loader">දත්ත පරීක්ෂා කරමින්...</div>';
+    container.innerHTML = '<div class="loader" style="text-align:center; padding:20px;">පුවත් ලැබෙමින් පවතී...</div>';
 
-    // සම්පූර්ණ URL එක Proxy එක හරහා යවනවා
-    const finalUrl = `${proxy}${encodeURIComponent(baseUrl + type + '?apikey=' + apiKey)}`;
+    // Proxy එක හරහා API URL එක සකස් කිරීම
+    const targetUrl = `${baseUrl}${type}?apikey=${apiKey}`;
+    const finalUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
 
     try {
         const response = await fetch(finalUrl);
+        if (!response.ok) throw new Error('Network response was not ok');
+        
         const data = await response.json();
         
-        // Bot API එකෙන් එන දත්ත structure එක 'result' ඇතුළේ තියෙන්නේ
+        // ඔයා එවපු screenshot එකේ විදිහට data තියෙන්නේ 'result' ඇතුළේ
         const articles = data.result || [];
 
         if (articles.length === 0) {
-            container.innerHTML = '<p>පුවත් කිසිවක් හමු නොවීය.</p>';
+            container.innerHTML = '<p style="text-align:center;">පුවත් කිසිවක් හමු නොවීය.</p>';
             return;
         }
 
@@ -30,10 +34,13 @@ async function fetchNews(type) {
             
             const card = `
                 <div class="news-card">
-                    <img src="${article.image || 'https://via.placeholder.com/400x250?text=News'}" alt="news">
+                    <img src="${article.image || 'https://via.placeholder.com/400x250?text=No+Image'}" 
+                         alt="news" 
+                         onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
                     <div class="news-content">
+                        <span class="source-tag">${article.source || 'News'}</span>
                         <h3>${article.title}</h3>
-                        <p>${article.description || ''}</p>
+                        <p>${article.desc || ''}</p>
                         <a href="${article.url}" target="_blank" class="read-more">වැඩිදුර කියවන්න</a>
                     </div>
                 </div>
@@ -44,8 +51,8 @@ async function fetchNews(type) {
         ticker.innerText = tickerText;
 
     } catch (error) {
-        container.innerHTML = '<p>සර්වර් එකට සම්බන්ධ වීමට නොහැක. පසුව උත්සාහ කරන්න.</p>';
-        console.error("Error:", error);
+        container.innerHTML = '<p style="text-align:center; color:red;">දත්ත ලබා ගැනීමට නොහැකි විය. පසුව නැවත උත්සාහ කරන්න.</p>';
+        console.error("Fetch error:", error);
     }
 }
 
