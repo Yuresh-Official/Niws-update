@@ -1,47 +1,54 @@
-const apiKey = "hiru_58d3adee3c4f2f452d175f42e18b30f7";
-const baseUrl = "https://hiru-api-news.vercel.app/api/news/";
-// CORS Error එක විසඳීමට මෙම Proxy එක අනිවාර්යයි
-const proxyUrl = "https://corsproxy.io/?"; 
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
-async function fetchNews(type) {
+const firebaseConfig = {
+  apiKey: "AIzaSyDsJ3-0AXE5e2XYSFbYnXz9KnlY1AvOv7g",
+  authDomain: "smart-notes-sl.firebaseapp.com",
+  databaseURL: "https://smart-notes-sl-default-rtdb.firebaseio.com",
+  projectId: "smart-notes-sl",
+  storageBucket: "smart-notes-sl.firebasestorage.app",
+  messagingSenderId: "887470710465",
+  appId: "1:887470710465:web:dced581802fce10ef93e40",
+  measurementId: "G-YFSVQYCYW0"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getDatabase(app);
+
+function loadNews() {
     const container = document.getElementById('news-container');
     const ticker = document.getElementById('breaking-news');
-    container.innerHTML = '<div class="loader" style="text-align:center; padding:20px;">පුවත් ලැබෙමින් පවතී...</div>';
+    const newsRef = ref(db, 'news');
 
-    // Proxy එක හරහා API URL එක සකස් කිරීම
-    const targetUrl = `${baseUrl}${type}?apikey=${apiKey}`;
-    const finalUrl = `${proxyUrl}${encodeURIComponent(targetUrl)}`;
-
-    try {
-        const response = await fetch(finalUrl);
-        if (!response.ok) throw new Error('Network response was not ok');
+    onValue(newsRef, (snapshot) => {
+        const data = snapshot.val();
         
-        const data = await response.json();
-        
-        // ඔයා එවපු screenshot එකේ විදිහට data තියෙන්නේ 'result' ඇතුළේ
-        const articles = data.result || [];
-
-        if (articles.length === 0) {
-            container.innerHTML = '<p style="text-align:center;">පුවත් කිසිවක් හමු නොවීය.</p>';
+        if (!data) {
+            container.innerHTML = `
+                <div style="grid-column: 1/-1; text-align: center; padding: 50px;">
+                    <h3>පද්ධතියේ පුවත් කිසිවක් නොමැත.</h3>
+                    <p>කරුණාකර Firebase Realtime Database එකට පුවත් ඇතුළත් කරන්න.</p>
+                </div>`;
+            ticker.innerText = "පුවත් කිසිවක් වාර්තා වී නොමැත.";
             return;
         }
 
         container.innerHTML = '';
         let tickerText = "";
+        
+        // Data Objects Array එකක් බවට හරවා අලුත්ම ඒවා උඩට ගැනීම
+        const newsList = Object.values(data).reverse();
 
-        articles.forEach(article => {
-            tickerText += ` • ${article.title} `;
+        newsList.forEach(item => {
+            tickerText += ` • ${item.title} `;
             
             const card = `
                 <div class="news-card">
-                    <img src="${article.image || 'https://via.placeholder.com/400x250?text=No+Image'}" 
-                         alt="news" 
-                         onerror="this.src='https://via.placeholder.com/400x250?text=No+Image'">
+                    <img src="${item.image || 'https://via.placeholder.com/400x250?text=News'}" alt="news">
                     <div class="news-content">
-                        <span class="source-tag">${article.source || 'News'}</span>
-                        <h3>${article.title}</h3>
-                        <p>${article.desc || ''}</p>
-                        <a href="${article.url}" target="_blank" class="read-more">වැඩිදුර කියවන්න</a>
+                        <h3>${item.title}</h3>
+                        <p>${item.desc || item.description || ''}</p>
+                        <a href="${item.url || '#'}" target="_blank" class="read-more">වැඩිදුර කියවන්න →</a>
                     </div>
                 </div>
             `;
@@ -49,11 +56,7 @@ async function fetchNews(type) {
         });
 
         ticker.innerText = tickerText;
-
-    } catch (error) {
-        container.innerHTML = '<p style="text-align:center; color:red;">දත්ත ලබා ගැනීමට නොහැකි විය. පසුව නැවත උත්සාහ කරන්න.</p>';
-        console.error("Fetch error:", error);
-    }
+    });
 }
 
-window.onload = () => fetchNews('all');
+window.onload = loadNews;
